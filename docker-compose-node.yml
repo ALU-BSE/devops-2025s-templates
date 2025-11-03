@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  # --- The Node.js App Service ---
+  web:
+    # Build the image from the Dockerfile in the current directory
+    build: .
+    ports:
+      # Map port 3000 on your laptop to port 3000 in the container
+      # Change 3000 if your Node app runs on a different port
+      - "3000:3000"
+    environment:
+      # Environment variables your Node.js app will use to connect
+      - DB_HOST=db
+      - DB_USER=myuser
+      - DB_PASSWORD=mypassword
+      - DB_NAME=mydb
+      - PORT=3000 # Your app might read this to know what port to run on
+    depends_on:
+      - db
+
+  # --- The PostgreSQL Database Service ---
+  db:
+    image: postgres:15
+    restart: always # Always restart the DB if it crashes
+    environment:
+      # These variables create the user and database on first run
+      - POSTGRES_USER=myuser
+      - POSTGRES_PASSWORD=mypassword
+      - POSTGRES_DB=mydb
+    volumes:
+      # This saves your database data to a 'volume' on your host machine
+      # so it persists even if the container is removed.
+      - postgres_data:/var/lib/postgresql/data
+
+# Define the named volume for persistence
+volumes:
+  postgres_data:
