@@ -1,0 +1,40 @@
+# Specify the Docker Compose file version
+version: '3.8'
+
+# Define all the 'services' (containers) your app needs
+services:
+  
+  # --- The Web Application Service ---
+  web:
+    # Build the image from the Dockerfile in the current directory (.)
+    build: .
+    ports:
+      # Map port 8000 on your laptop (host) to port 8000 in the container
+      - "8000:8000"
+    environment:
+      # Pass environment variables to the 'web' container
+      # These MUST match the variables used in app.py
+      - DB_HOST=db
+      - POSTGRES_USER=myuser
+      - POSTGRES_PASSWORD=mypassword
+    # This makes the 'web' service wait for the 'db' service 
+    # to *start* before it starts.
+    depends_on:
+      - db
+
+  # --- The PostgreSQL Database Service ---
+  db:
+    # Use a pre-built official image from Docker Hub
+    image: postgres:15
+    environment:
+      # These variables are required by the 'postgres' image
+      # to initialize the database
+      - POSTGRES_USER=myuser
+      - POSTGRES_PASSWORD=mypassword
+    # Mount a volume to persist data
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+# Define the named volume for persistence
+volumes:
+  postgres_data:
