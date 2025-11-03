@@ -1,0 +1,32 @@
+# Use an official Python runtime as a parent image
+FROM python:3.11-slim
+
+# Set environment variables
+# 1. Prevents Python from writing .pyc files to disk
+# 2. Prevents Python from buffering stdout/stderr
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Install system dependencies (e.g., for postgresql-client)
+# Use this if your app needs to connect to Postgres
+RUN apt-get update \
+    && apt-get install -y postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy the requirements file and install dependencies
+# This is done first to leverage Docker's build cache
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the rest of your application code into the container
+COPY . .
+
+# Expose the port the app runs on (Django's default)
+EXPOSE 8000
+
+# Run the development server
+# NOTE: Use '0.0.0.0' to make it accessible outside the container
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
