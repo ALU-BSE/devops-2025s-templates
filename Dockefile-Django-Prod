@@ -1,0 +1,66 @@
+# --- STAGE 1: The 'builder' ---
+# This stage builds your dependencies
+FROM python:3.11-slim AS builder
+
+# Set env variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+WORKDIR /app
+
+# Install build dependencies (e.g., for compiling C extensions)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create a virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Install dependencies into the venv
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+
+# --- STAGE 2: The 'production' runner ---
+# This is the final, lean image
+FROM python:3.11-slim AS final
+
+# Set env variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# Create a non-root user and group
+RUN addgroup --system app && adduser --system --group app
+
+# Set the working directory
+WORKDIR /home/app/web
+
+# Install runtime-only system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy the virtual environment from the 'builder' stage
+COPY --from=builder /opt/venv /opt/venv
+
+# Copy the application code
+COPY . .
+
+# Change ownership of files to the non-root user
+RUN chown -R app:app /home/app
+
+# Switch to the non-root user
+USER app
+
+# Set the PATH to include the venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Expose the port
+EXPOSE 8000
+
+# Run Gunicorn
+# Add Gunicorn to your requirements.txt
+# Replace 'your_project_name.wsgi' with your actual WSGI app path
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "your_project_name.wsgi"]
